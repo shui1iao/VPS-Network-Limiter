@@ -10,6 +10,7 @@ UNIT_FILE=${VPS_LIMITER_UNIT_FILE:-/etc/systemd/system/vps-network-limiter.servi
 INSTALL_PATH=${VPS_LIMITER_INSTALL_PATH:-/usr/local/sbin/vps-network-limiter}
 SERVICE_NAME="vps-network-limiter.service"
 IFB_DEVICE="ifb-vpslimit"
+CANONICAL_URL=${VPS_LIMITER_SOURCE_URL:-https://limit.shuijiao.de}
 
 CONFIG_INTERFACE=""
 CONFIG_UPLOAD=""
@@ -390,17 +391,34 @@ apply_limits() {
 
 install_self() {
     local source_path install_directory temporary
-    source_path=$(readlink -f "${BASH_SOURCE[0]}") || return 1
+    source_path=$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || true)
     install_directory=$(dirname "$INSTALL_PATH")
     mkdir -p "$install_directory" || return 1
 
-    if [[ "$source_path" == "$INSTALL_PATH" ]]; then
+    if [[ -n "$source_path" && "$source_path" == "$INSTALL_PATH" ]]; then
         chmod 755 "$INSTALL_PATH"
         return
     fi
 
     temporary="${INSTALL_PATH}.tmp.$$"
-    cp -- "$source_path" "$temporary" || return 1
+    rm -f "$temporary"
+    if [[ -n "$source_path" && -f "$source_path" ]]; then
+        cp -- "$source_path" "$temporary" || return 1
+    else
+        if ! command -v curl >/dev/null 2>&1; then
+            die "通过短链运行时需要 curl 才能安装持久化脚本。"
+            return 1
+        fi
+        if ! curl -fLsS --retry 3 --connect-timeout 10 --max-time 60 \
+            -o "$temporary" "$CANONICAL_URL"; then
+            rm -f "$temporary"
+            return 1
+        fi
+    fi
+    if [[ ! -s "$temporary" ]] || ! bash -n "$temporary"; then
+        rm -f "$temporary"
+        return 1
+    fi
     chmod 755 "$temporary" || {
         rm -f "$temporary"
         return 1

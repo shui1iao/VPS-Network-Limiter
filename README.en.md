@@ -31,7 +31,13 @@ Install dependencies on Debian/Ubuntu:
 apt update && apt install -y iproute2 kmod
 ```
 
-## Usage
+## One-Line Usage
+
+```bash
+bash <(curl -Ls https://limit.shuijiao.de)
+```
+
+You can also clone the repository:
 
 ```bash
 git clone https://github.com/shui1iao/VPS-Network-Limiter.git

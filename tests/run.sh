@@ -27,6 +27,7 @@ setup_case() {
     export MOCK_FILTER_PRESENT="1"
     export MOCK_DEFAULT_INTERFACE="eth0"
     export MOCK_SYSTEMCTL_FAIL_ONCE_FILE=""
+    export TEST_SCRIPT_SOURCE="$SCRIPT"
     : >"$MOCK_LOG"
 
     cat >"$CASE_DIR/mockbin/mock-command" <<'MOCK'
@@ -86,6 +87,19 @@ case "$cmd" in
             printf '%s\n' 'action order 1: mirred (Egress Redirect to device ifb-vpslimit) stolen'
         fi
         ;;
+    curl)
+        output=""
+        while [[ $# -gt 0 ]]; do
+            if [[ "$1" == "-o" ]]; then
+                output=$2
+                shift 2
+            else
+                shift
+            fi
+        done
+        [[ -n "$output" ]] || exit 1
+        cp "$TEST_SCRIPT_SOURCE" "$output"
+        ;;
     modprobe)
         ;;
     systemctl)
@@ -100,7 +114,7 @@ case "$cmd" in
 esac
 MOCK
     chmod +x "$CASE_DIR/mockbin/mock-command"
-    for cmd in ip tc modprobe systemctl; do
+    for cmd in ip tc curl modprobe systemctl; do
         ln -s mock-command "$CASE_DIR/mockbin/$cmd"
     done
 
@@ -190,6 +204,25 @@ test_rejects_invalid_rates() {
             return 1
         }
     done
+}
+
+test_process_substitution_installs_complete_script() {
+    setup_case
+    set +e
+    OUTPUT=$(bash <(cat "$SCRIPT") set 100 2>&1)
+    STATUS=$?
+    set -e 2>/dev/null || true
+    assert_status 0 || return 1
+    [[ -s "$VPS_LIMITER_INSTALL_PATH" ]] || {
+        printf '    installed script is empty\n'
+        return 1
+    }
+    cmp -s "$VPS_LIMITER_INSTALL_PATH" "$SCRIPT" || {
+        printf '    installed script differs from source\n'
+        return 1
+    }
+    bash -n "$VPS_LIMITER_INSTALL_PATH" || return 1
+    assert_file_contains "$MOCK_LOG" 'curl -fLsS' || return 1
 }
 
 test_set_accepts_only_one_plain_mbps_number() {
@@ -352,6 +385,7 @@ CONF
 
 run_test 'normalizes supported rate formats' test_normalizes_supported_rates
 run_test 'rejects malformed and unsafe rates' test_rejects_invalid_rates
+run_test 'process substitution installs a complete persistent script' test_process_substitution_installs_complete_script
 run_test 'public set accepts only one plain Mbps number' test_set_accepts_only_one_plain_mbps_number
 run_test 'applies upload/download limits and persists them' test_set_applies_both_directions_and_persists
 run_test 'interactive set accepts one Mbps number for both directions' test_interactive_set_accepts_one_mbps_number_for_both_directions

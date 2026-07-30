@@ -31,7 +31,13 @@ Debian/Ubuntu 可安装依赖：
 apt update && apt install -y iproute2 kmod
 ```
 
-## 使用
+## 一键运行
+
+```bash
+bash <(curl -Ls https://limit.shuijiao.de)
+```
+
+也可以克隆仓库后运行：
 
 ```bash
 git clone https://github.com/shui1iao/VPS-Network-Limiter.git
