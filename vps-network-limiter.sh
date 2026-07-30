@@ -347,7 +347,9 @@ apply_limits() {
     fi
 
     if [[ "$download" != "none" ]]; then
-        command -v modprobe >/dev/null 2>&1 && modprobe ifb numifbs=0 >/dev/null 2>&1 || true
+        if command -v modprobe >/dev/null 2>&1; then
+            modprobe ifb numifbs=0 >/dev/null 2>&1 || true
+        fi
         if ! interface_exists "$IFB_DEVICE"; then
             if ! ip link add "$IFB_DEVICE" type ifb; then
                 cleanup_managed_rules "$interface"
