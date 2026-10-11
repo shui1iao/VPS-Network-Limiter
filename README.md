@@ -34,7 +34,7 @@ apt update && apt install -y iproute2 kmod
 ## 一键运行
 
 ```bash
-bash <(curl -Ls https://limit.shuijiao.de)
+bash <(curl -Ls https://limit.siaoz.si)
 ```
 
 也可以克隆仓库后运行：

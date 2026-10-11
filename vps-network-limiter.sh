@@ -10,7 +10,7 @@ UNIT_FILE=${VPS_LIMITER_UNIT_FILE:-/etc/systemd/system/vps-network-limiter.servi
 INSTALL_PATH=${VPS_LIMITER_INSTALL_PATH:-/usr/local/sbin/vps-network-limiter}
 SERVICE_NAME="vps-network-limiter.service"
 IFB_DEVICE="ifb-vpslimit"
-CANONICAL_URL=${VPS_LIMITER_SOURCE_URL:-https://limit.shuijiao.de}
+CANONICAL_URL=${VPS_LIMITER_SOURCE_URL:-https://limit.siaoz.si}
 
 CONFIG_INTERFACE=""
 CONFIG_UPLOAD=""

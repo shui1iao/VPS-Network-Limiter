@@ -34,7 +34,7 @@ apt update && apt install -y iproute2 kmod
 ## One-Line Usage
 
 ```bash
-bash <(curl -Ls https://limit.shuijiao.de)
+bash <(curl -Ls https://limit.siaoz.si)
 ```
 
 You can also clone the repository:
