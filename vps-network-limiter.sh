@@ -2,7 +2,7 @@
 set -uo pipefail
 
 PROGRAM_NAME="VPS Network Limiter"
-VERSION="1.0.0"
+VERSION="1.0.1"
 PATH="${PATH:-}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
 CONFIG_FILE=${VPS_LIMITER_CONFIG_FILE:-/etc/vps-network-limiter.conf}
@@ -99,6 +99,10 @@ validate_saved_rate() {
 }
 
 detect_default_interface() {
+    if [[ -n "${VPS_LIMITER_INTERFACE:-}" ]]; then
+        printf '%s\n' "$VPS_LIMITER_INTERFACE"
+        return 0
+    fi
     local interface=""
     interface=$(ip -4 route show default 2>/dev/null | awk '
         $1 == "default" {
@@ -258,6 +262,7 @@ has_custom_root_qdisc() {
     [[ -n "$root_line" ]] || return 1
     [[ "$root_line" =~ ^qdisc[[:space:]]+tbf[[:space:]]+1:[[:space:]]+root ]] && return 1
     [[ "$root_line" =~ ^qdisc[[:space:]]+[^[:space:]]+[[:space:]]+0:[[:space:]]+root ]] && return 1
+    [[ "$root_line" =~ ^qdisc[[:space:]]+(fq|fq_codel|pfifo_fast|noqueue|mq)[[:space:]] ]] && return 1
     return 0
 }
 
@@ -297,13 +302,15 @@ cleanup_managed_rules() {
             warn "未能删除 $interface 上的出站限速规则。"
     fi
 
-    if [[ "$had_managed_download" -eq 1 ]]; then
+    if [[ "$had_managed_download" -eq 1 ]] || interface_exists "$IFB_DEVICE"; then
         if has_managed_ingress_qdisc "$interface"; then
             tc qdisc del dev "$interface" ingress >/dev/null 2>&1 || \
                 warn "未能删除 $interface 上的入站重定向规则。"
         fi
-        tc qdisc del dev "$IFB_DEVICE" root handle 2: >/dev/null 2>&1 || \
-            warn "未能删除 $IFB_DEVICE 上的下载限速规则。"
+        if [[ "$had_managed_download" -eq 1 ]]; then
+            tc qdisc del dev "$IFB_DEVICE" root handle 2: >/dev/null 2>&1 || \
+                warn "未能删除 $IFB_DEVICE 上的下载限速规则。"
+        fi
         ip link set "$IFB_DEVICE" down >/dev/null 2>&1 || true
         ip link delete "$IFB_DEVICE" type ifb >/dev/null 2>&1 || \
             warn "未能删除虚拟网卡 $IFB_DEVICE。"
